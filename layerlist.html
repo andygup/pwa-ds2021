@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>LayerList</title>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    .action {
+        color: blue;
+        cursor: pointer;
+        text-decoration: underline;
+    }    
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.18/"></script>
+
+  <script>
+    require([
+      "esri/views/MapView", 
+      "esri/WebMap", 
+      "esri/widgets/LayerList",
+      "esri/portal/Portal",
+      "esri/identity/OAuthInfo",
+      "esri/identity/IdentityManager",
+      "esri/portal/PortalQueryParams"], (
+        MapView, WebMap, LayerList, Portal, OAuthInfo, esriId, PortalQueryParams) => {
+
+      const personalPanelElement = document.getElementById("personalizedPanel");
+      const anonPanelElement = document.getElementById("anonymousPanel");
+      const userIdElement = document.getElementById("userId");                 
+
+      login();          
+
+      function login() {
+        const info = new OAuthInfo({
+          // Swap this ID out with registered application ID
+          appId: "Ia9wZrmuPTAIWaiz",
+          // Uncomment the next line and update if using your own portal
+          // portalUrl: "https://<host>:<port>/arcgis"
+          // Uncomment the next line to prevent the user's signed in state from being shared with other apps on the same domain with the same authNamespace value.
+          // authNamespace: "portal_oauth_inline",
+          popup: false
+        });
+
+        esriId.registerOAuthInfos([info]);
+        esriId
+          .checkSignInStatus(info.portalUrl + "/sharing")
+          .then(function () {
+            loadMap();
+          })
+          .catch(function () {
+            // Anonymous view
+            anonPanelElement.style.display = "block";
+            personalPanelElement.style.display = "none";
+          });
+
+        document.getElementById("sign-in").addEventListener("click", function () {
+          // user will be redirected to OAuth Sign In page
+          esriId.getCredential(info.portalUrl + "/sharing");
+        });
+
+        document.getElementById("sign-out").addEventListener("click", function () {
+          esriId.destroyCredentials();
+          window.location.reload();
+        });
+      }
+
+      function loadMap() {
+        let webmap = new WebMap({
+          portalItem: {
+            // autocasts as new PortalItem()
+            id: "8f8dc3f6201b45939c1e7c4e28cdf4f1"
+          }
+        });
+
+        let view = new MapView({
+          map: webmap,
+          container: "viewDiv"
+        });
+
+        const layerList = new LayerList({
+          view: view
+        });
+        view.ui.add(layerList, "top-right");
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <div id="anonymousPanel" style="display: none; padding: 5px; text-align: center;">
+    <span id="sign-in" class="action">Sign In</span> and view your ArcGIS Online items.
+  </div>
+  <div id="personalizedPanel" style="display: none; padding: 5px; text-align: center;">
+    Welcome <span id="userId" style="font-weight: bold;"></span> &nbsp;-&nbsp;
+    <span id="sign-out" class="action">Sign Out</span>
+  </div>
+  <div id="viewDiv"></div>
+</body>
+
+</html>

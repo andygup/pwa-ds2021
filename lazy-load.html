@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Lazy Load Example</title>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    #btn1 {
+      font-size: 20px;
+      padding: 15px;
+    }
+  </style>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.18/"></script>
+
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/Graphic",
+      "esri/layers/GraphicsLayer"
+    ], (Map, MapView, Graphic, GraphicsLayer) => {
+
+      const polySym = {
+        type: "simple-fill", // autocasts as new SimpleFillSymbol()
+        color: [140, 140, 222, 0.5],
+        outline: {
+          color: [0, 0, 0, 0.5],
+          width: 2
+        }
+      };
+
+      const button = document.getElementById("btn1");
+      button.onclick = () => {
+
+        view.when(() => {
+          require([
+            "esri/geometry/geometryEngine"
+          ], (geometryEngine) => {
+            const buffer = geometryEngine.buffer(view.center, 20, "miles");
+            bufferLayer.add(
+              new Graphic({
+                geometry: buffer,
+                symbol: polySym
+              })
+            );
+          });
+        })
+
+      }
+
+      let bufferLayer = new GraphicsLayer();
+      const map = new Map({
+        basemap: "streets",
+        layers: [bufferLayer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        zoom: 8,
+        center: [-104.98, 39.7]
+      });
+
+    });
+
+  </script>
+</head>
+
+<body>
+  <button id="btn1">Perform GeometryEngine function</button>
+  <div id="viewDiv"></div>
+</body>
+
+</html>

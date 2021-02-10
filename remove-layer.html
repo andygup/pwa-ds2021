@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Visible-Remove</title>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      background-color: lightgray;
+    }
+
+    .btn {
+      font-size: 20px;
+      padding: 15px;
+    }
+
+  </style>
+
+    <script>
+      var locationPath = location.pathname.replace(/\/[^\/]+$/, "");
+      window.dojoConfig = {
+        packages: [
+          {
+            name: "app",
+            location: locationPath + "/js"
+          }
+        ]
+      };
+    </script>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.18/"></script>
+
+  <script>
+    require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/core/watchUtils"],
+      (Map, MapView, FeatureLayer, watchUtils) => {
+let m = require(['app/amd-test'], (test) => {
+  console.log("test ", test.height);
+});
+        fl_layerView = null;
+
+        let map = new Map({
+          basemap: "streets"
+        });
+
+        let featureLayer = new FeatureLayer({
+          url:
+            "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/Mexico_demographics/FeatureServer/0"
+        });
+
+        map.add(featureLayer);
+
+        let view = new MapView({
+          container: "viewDiv",
+          map: map,
+          zoom: 6,
+          center: [-100.52, 21.29] // longitude, latitude
+        });
+
+        view.whenLayerView(featureLayer)
+          .then((layerView) => {
+            return watchUtils.whenFalseOnce(layerView, 'updating', (value, oldValue, propertyName, target) => {
+              fl_layerView = target;
+              console.log("FeatureLayer loaded");
+            });
+          })
+
+        const btn1 = document.getElementById("btn1");
+        btn1.onclick = () => {
+
+          if (featureLayer.visible) {
+            console.log("FeatureLayer invisible");
+            btn1.innerText = "Set visible!";
+            featureLayer.visible = false;
+          }
+          else {
+            console.log("FeatureLayer visible");
+            btn1.innerText = "Set invisible!";
+            featureLayer.visible = true;
+          }
+        }
+
+        const btn2 = document.getElementById("btn2");
+        btn2.onclick = () => {
+          if (fl_layerView !== null && fl_layerView.layer.type === "feature") {
+            console.log("FeatureLayer removed");
+            map.remove(featureLayer);
+            fl_layerView = null;
+            btn2.innerText = "Add Layer!"
+          }
+          else {
+            console.log("FeatureLayer added");
+            map.add(featureLayer);
+
+            view.whenLayerView(featureLayer)
+              .then((layerView) => {
+                return watchUtils.whenFalseOnce(layerView, 'updating', (value, oldValue, propertyName, target) => {
+                  fl_layerView = target;
+                  console.log("FeatureLayer loaded");
+                });
+              })
+
+            btn2.innerText = "Remove Layer!"
+          }
+        }
+
+        const btn3 = document.getElementById("btn3");
+        btn3.onclick = () => {
+          if(featureLayer){
+            featureLayer.destroy();
+            console.log("FeatureLayer destroyed");
+            btn3.innerText = "FeatureLayer destroyed!";
+          }
+          else {
+            console.log("FeatureLayer has been destroyed, can't reuse it.");
+          }
+        }
+
+        // Listen for any layer being added or removed in the Map
+        // map.allLayers.on("change", (event) => {
+        //   console.log(event);
+        //   // console.log("Layer added: ", event.added);
+        //   // console.log("Layer removed: ", event.removed);
+        // });      
+
+      });  
+  </script>
+</head>
+
+<body>
+  <button id="btn1" class="btn">Set invisible!</button>
+  <button id="btn2" class="btn">Remove Layer!</button>
+  <button id="btn3" class="btn">Destroy Layer!</button>
+  <div id="viewDiv"></div>
+</body>
+
+</html>

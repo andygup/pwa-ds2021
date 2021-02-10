@@ -1,0 +1,422 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <link href="https://fonts.googleapis.com/css2?family=Michroma&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/1c5cacee14.js" crossorigin="anonymous"></script>
+    <title>Performance Test - Features</title>
+
+    <style>
+
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+            font-family: Helvetica, Arial, sans-serif;
+        }
+
+        .action {
+            color: blue;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .pod {
+            width: 300px;
+            height: 140px;
+            backdrop-filter: blur(5px);
+            box-shadow: 1px 1px rgba(0, 0, 0, 0.3);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #ffffff;
+            display: none;
+        }
+
+
+        .pod-title{
+            width: 100%;
+            height: 40px;
+            line-height: 40px;
+            font-size: 16px;
+            padding: 0 10px 0 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            box-sizing: border-box;
+        }
+
+        .pod-chk{
+            width: 100%;
+            height: 40px;
+            line-height: 40px;
+            font-size: 14px;
+            padding: 0 10px 0 10px;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+
+        .pod-num{
+            width: 100%;
+            height: 100px;
+            line-height: 100px;
+            font-size: 60px;
+            padding: 0 10px 0 10px;
+            box-sizing: border-box;
+            font-family: Michroma;
+            text-align: center;
+        }        
+
+        @media only screen and (max-width: 600px) {
+            .pod {
+                width: 155px;
+                height: 140px;
+                backdrop-filter: blur(5px);
+                box-shadow: 1px 1px rgba(0, 0, 0, 0.3);
+                background-color: rgba(0, 0, 0, 0.7);
+                color: #ffffff;
+            }
+            .pod-chk {
+                width: 100%;
+                height: 40px;
+                line-height: 40px;
+                font-size: 10px;
+                padding: 0 10px 0 10px;
+                box-sizing: border-box;
+                cursor: pointer;
+            }            
+            .pod-title {
+                width: 100%;
+                height: 40px;
+                line-height: 40px;
+                font-size: 8px;
+                padding: 0 10px 0 10px;
+                background-color: rgba(0, 0, 0, 0.5);
+                box-sizing: border-box;
+            }        
+            .pod-num{
+                width: 100%;
+                height: 100px;
+                line-height: 100px;
+                font-size: 30px;
+                padding: 0 10px 0 10px;
+                box-sizing: border-box;
+                font-family: Michroma;
+                text-align: center;
+            }                    
+        }        
+
+    </style>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+
+    <script src="https://js.arcgis.com/4.18/"></script>
+    <script id='worker1' type="javascript/worker">
+
+    self['onmessage'] = (event) => {  
+      postMessage({
+        count: counter(event.data)
+      });            
+    }
+
+    const counter = (geometry) => {
+      let count = 0;
+      geometry.forEach(element => {
+        count += element[0].length
+      })
+      return count;
+    }        
+  </script>
+
+    <script>
+        require([
+            "esri/Map", 
+            "esri/views/MapView", 
+            "esri/layers/FeatureLayer", 
+            "esri/portal/Portal",
+            "esri/identity/OAuthInfo",
+            "esri/identity/IdentityManager",
+            "esri/portal/PortalQueryParams"], 
+        (Map, MapView, FeatureLayer, Portal, OAuthInfo, esriId, PortalQueryParams) => {
+            const mainDiv = document.getElementById("div-main");
+            const chkDiv = document.getElementById("div-main");
+            const fpsDiv = document.getElementById("div-fps");
+            const fpsDivText = document.getElementById("div-fps-text");
+            const fpsNumFeaturesDiv = document.getElementById("div-numfeatures");
+            const fpsNumFeaturesDivText = document.getElementById("div-numfeatures-text");
+            const numVerticesDiv = document.getElementById("div-numvertices");
+            const numVerticesDivText = document.getElementById("div-numvertices-text");
+            const personalPanelElement = document.getElementById("personalizedPanel");
+            const anonPanelElement = document.getElementById("anonymousPanel");
+            const userIdElement = document.getElementById("userId");            
+
+            let worker;
+            let js = document.getElementById('worker1').textContent;
+            let bb = new Blob([js]);
+            worker = new Worker(URL.createObjectURL(bb));
+            worker.onerror = (e) => {
+                console.error(e.data);
+            }
+
+            let layerViewZipcodes;
+            let layerViewCounties;
+            let layerViewStates;
+
+            const renderer = {
+                type: "simple",
+                symbol: {
+                    type: "simple-fill",
+                    color: [220, 220, 220, 0.7],
+                    style: "solid",
+                    outline: { 
+                        color: [160, 160, 160],
+                        width: 1
+                    }
+                }
+            };
+
+            const layerZipcodes = new FeatureLayer({
+                url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/USA_Zip_Codes/FeatureServer/0",  // points to a Feature Service layer url
+                 maxScale: 0,
+                renderer: renderer
+            });
+
+            const layerCounties = new FeatureLayer({
+                url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/US_Counties/FeatureServer/0",  // points to a Feature Service layer url
+                minScale: 4000000,
+                maxScale: 1000000,
+                visible: false,
+                renderer: renderer
+            });
+
+            const layerStates = new FeatureLayer({
+                url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/USA_States_with_capital_loations/FeatureServer/0",  // points to a Feature Service layer url
+                maxScale: 4000000,
+                visible: false,
+                renderer: renderer
+            });
+
+            login();
+
+            function login(){
+                const info = new OAuthInfo({
+                    // Swap this ID out with registered application ID
+                    appId: "Ia9wZrmuPTAIWaiz",
+                    // Uncomment the next line and update if using your own portal
+                    // portalUrl: "https://<host>:<port>/arcgis"
+                    // Uncomment the next line to prevent the user's signed in state from being shared with other apps on the same domain with the same authNamespace value.
+                    // authNamespace: "portal_oauth_inline",
+                    popup: false
+                });
+
+                esriId.registerOAuthInfos([info]);
+                esriId
+                    .checkSignInStatus(info.portalUrl + "/sharing")
+                    .then(function () {
+                        init();
+                    })
+                    .catch(function () {
+                        // Anonymous view
+                        anonPanelElement.style.display = "block";
+                        personalPanelElement.style.display = "none";
+                    });                
+
+                document.getElementById("sign-in").addEventListener("click", function () {
+                    // user will be redirected to OAuth Sign In page
+                    esriId.getCredential(info.portalUrl + "/sharing");
+                });
+
+                document.getElementById("sign-out").addEventListener("click", function () {
+                    esriId.destroyCredentials();
+                    window.location.reload();
+                });                    
+            }
+
+            function init() {
+
+                // Display the panel
+                const podClasses = document.querySelectorAll('.pod');
+                podClasses.forEach( e => {
+                    e.style.display = "inline";
+                })
+
+                const map = new Map({
+                    basemap: "streets-vector",
+                    layers: [layerZipcodes, layerCounties, layerStates]
+                });
+
+                const view = new MapView({
+                    map: map,
+                    container: "viewDiv",
+                    opacity: 0.5,
+                    zoom: 10,
+                    center: [-104, 39]
+                });
+
+                view.ui.move('zoom', 'top-right');
+
+                view.when(() => {
+                    view.ui.add(mainDiv, "top-left");
+                    view.ui.add(fpsDiv, "top-left");
+                    view.ui.add(fpsNumFeaturesDiv, "top-left");
+                    view.ui.add(numVerticesDiv, "top-left");
+                    chkDiv.onclick = toggle;
+
+                    view.whenLayerView(layerZipcodes).then(function (layerView) {
+                        layerViewZipcodes = layerView;
+                    });
+
+                    view.whenLayerView(layerCounties).then(function (layerView) {
+                        layerViewCounties = layerView;
+                    });
+
+                    view.whenLayerView(layerStates).then(function (layerView) {
+                        layerViewStates = layerView;
+                    });
+
+                    view.watch("updating", (v) => {
+                        updateEnd(v, view);
+                    });
+                });
+            }            
+
+            const times = [];
+            let fps;
+            let fpsAvg = [];
+            const arrAvg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+            const formatNum = (value) => {
+                if(value >= 1000000000) {
+                    return Math.round(value / 1000000000) + "B";
+                }else if (value >= 1000000) {
+                    return Math.round(value / 1000000) + "M";
+                }else if (value >= 1000) {
+                    return Math.round(value / 1000) + "K";
+                } else {
+                    return value;
+                }
+            };
+
+            let chk = false;
+
+            const toggle = () => {
+                chk = !chk;
+                const el = document.getElementsByTagName("i")[0];
+                el.className = chk ? "fas fa-check-circle" : "far fa-circle";
+                layerZipcodes.minScale = chk ? 1000000 : 0;
+                layerZipcodes.refresh();
+                layerCounties.visible = chk;
+                layerStates.visible = chk;
+            }
+
+            const updateEnd = (value, view) => {
+                if(value) {
+                    numVerticesDivText.innerText = "---";
+                    fpsNumFeaturesDivText.innerText = "---";
+                } else {
+                    const s = view.scale;
+                    if(layerStates.visible && s > layerStates.maxScale) {
+                        countFeatures(layerViewStates);
+                    } else if (layerCounties.visible &&  s > layerCounties.maxScale && s < layerCounties.minScale) {
+                        countFeatures(layerViewCounties);
+                    } else {
+                        countFeatures(layerViewZipcodes);
+                    }
+                }
+            }
+
+            async function  countFeatures(layerView) {
+                layerView.queryFeatures({
+                    outFields: null,
+                    returnGeometry: true
+                }).then((results) => {
+                    fpsNumFeaturesDivText.innerText = formatNum(results.features.length);
+                    counter(results.features).then((r) => {
+                        worker.onmessage = (e) => {
+                            numVerticesDivText.innerText = formatNum(e.data.count);
+                        }
+                        worker.postMessage(r);
+                    });
+                });
+            }
+
+            async function counter(arr) {
+                let count = 0;
+                let geometryArr = [];
+                await arr.forEach(element => {
+                    if (element && element.hasOwnProperty("geometry") && element.geometry.hasOwnProperty("rings")) {
+                        geometryArr.push(element.geometry.rings);
+                    }
+                });
+                return geometryArr;
+            }
+
+            function refreshLoop() {
+                window.requestAnimationFrame(() => {
+                    const now = performance.now();
+                    while (times.length > 0 && times[0] <= now - 1000) {
+                        times.shift();
+                    }
+                    times.push(now);
+                    fps = times.length;
+                    fpsAvg.push(fps);
+
+                    if (fpsAvg.length > 100) {
+                        fpsAvg.shift();
+                    }
+                    if (fpsAvg.length > 2) {
+                        const avg = arrAvg(fpsAvg).toFixed(0);
+                        if (avg > 55) {
+                            fpsDiv.style.background = "rgba(7, 215, 7, 0.7)";
+                            fpsDiv.style.transition = "background 1000ms linear";
+                        }
+                        else if (avg > 45) {
+                            fpsDiv.style.background = "rgba(231, 158, 3, 0.7)";
+                            fpsDiv.style.transition = "background 1000ms linear";
+                        }
+                        else {
+                            fpsDiv.style.background = "rgba(255, 0, 0, 0.7)";
+                            fpsDiv.style.transition = "background 1000ms linear";
+                        }
+                        fpsDivText.innerText = avg;
+                    }
+                    refreshLoop();
+                });
+            }
+
+            refreshLoop();
+
+        });
+    </script>
+</head>
+
+<body>
+    <div id="anonymousPanel" style="display: none; padding: 5px; text-align: center;">
+        <span id="sign-in" class="action">Sign In</span> and view your ArcGIS Online items.
+    </div>
+    <div id="personalizedPanel" style="display: none; padding: 5px; text-align: center;">
+        Welcome <span id="userId" style="font-weight: bold;"></span> &nbsp;-&nbsp;
+        <span id="sign-out" class="action">Sign Out</span>
+    </div>
+    <div id="div-main" class="pod" style="height: 80px">
+        <div id="div-main-title" class="pod-title">PERFORMANCE TEST - FEATURES</div>
+        <div id="div-main-chk" class="pod-chk">
+            <i class="far fa-circle"></i> SCALE DEPENDENCY</div>
+        </div>
+    </div>
+    <div id="div-fps" class="pod">
+        <div id="div-fps-title" class="pod-title">FPS</div>
+        <div id="div-fps-text" class="pod-num">0</div>
+    </div>
+    <div id="div-numfeatures" class="pod">
+        <div id="div-numfeatures-title" class="pod-title">NUMBER OF FEATURES</div>
+        <div id="div-numfeatures-text" class="pod-num">0</div>
+    </div>
+    <div id="div-numvertices" class="pod">
+        <div id="div-numvertices-title" class="pod-title">NUMBER OF VERTICES</div>
+        <div id="div-numvertices-text" class="pod-num">0</div>
+    </div>
+    <div id="viewDiv"></div>
+</body>
+
+</html>
