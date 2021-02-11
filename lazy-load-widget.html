@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Sketch widget | Sample | ArcGIS API for JavaScript 4.18</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.12/"></script>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <script>
+    require([
+      "esri/WebMap",
+      "esri/layers/GraphicsLayer",
+      "esri/views/MapView"
+    ], function (WebMap, GraphicsLayer, MapView) {
+
+      const layer = new GraphicsLayer({
+        title: "Shapes"
+      });
+
+      let map = new WebMap({
+        portalItem: {
+          id: "aa1d3f80270146208328cf66d022e09c"
+        }
+      });
+
+      map.add(layer);
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        zoom: 5,
+        center: [90, 45]
+      });
+
+      function addSketchWidget(view) {
+        require(["esri/widgets/Sketch"], (Sketch) => {
+          const sketch = new Sketch({
+            layer: layer,
+            view: view,
+            // graphic will be selected as soon as it is created
+            creationMode: "update"
+          });
+
+          view.ui.add(sketch, "top-right");      
+        });  
+      }
+      
+      view.when(function () {
+        let element = document.createElement('div');
+        element.className = "esri-widget--button esri-widget esri-interactive";
+        element.innerHTML = '<span aria-hidden="true" class="esri-collapse__icon esri-icon-expand"></span>'
+        element.addEventListener('click', (evt) => {
+          view.ui.remove(element);
+          addSketchWidget(view);
+        });
+        
+        view.ui.add(element, "top-right");
+      });      
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
+
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no" />
+  <title>LayerList widget | Sample | ArcGIS API for JavaScript 4.18</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+  </style>
+
+  <script src="https://js.arcgis.com/4.18/"></script>
+
+  <script>
+    require(["esri/views/SceneView", "esri/WebScene"], function (
+      SceneView,
+      WebScene
+    ) {
+      var scene = new WebScene({
+        portalItem: {
+          // autocasts as new PortalItem()
+          id: "adfad6ee6c6043238ea64e121bb6429a"
+        }
+      });
+
+      var view = new SceneView({
+        container: "viewDiv",
+        map: scene
+      });
+
+      function addLayerList(view) {
+        require(["esri/widgets/LayerList"], (LayerList) => {
+          var layerList = new LayerList({
+            view: view
+          });
+
+          // Add widget to the top right corner of the view
+          view.ui.add(layerList, "top-right");
+        });           
+      }
+
+      view.when(function () {
+
+        var element = document.createElement('div');
+        element.className = "esri-widget--button esri-widget esri-interactive";
+        element.innerHTML = '<span aria-hidden="true" class="esri-collapse__icon esri-icon-expand"></span>'
+        element.addEventListener('click', (evt) => {
+          console.log("clicked");
+          view.ui.remove(element);
+          addLayerList(view);
+        });
+        view.ui.add(element, "top-right");        
+      });
+    });
+  </script>
+</head>
+
+<body class="calcite">
+  <div id="viewDiv"></div>
+</body>
+
+</html> -->
