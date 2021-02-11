@@ -26,27 +26,13 @@
 
   </style>
 
-    <script>
-      var locationPath = location.pathname.replace(/\/[^\/]+$/, "");
-      window.dojoConfig = {
-        packages: [
-          {
-            name: "app",
-            location: locationPath + "/js"
-          }
-        ]
-      };
-    </script>
-
   <link rel="stylesheet" href="https://js.arcgis.com/4.18/esri/themes/light/main.css" />
   <script src="https://js.arcgis.com/4.18/"></script>
 
   <script>
     require(["esri/Map", "esri/views/MapView", "esri/layers/FeatureLayer", "esri/core/watchUtils"],
       (Map, MapView, FeatureLayer, watchUtils) => {
-let m = require(['app/amd-test'], (test) => {
-  console.log("test ", test.height);
-});
+
         fl_layerView = null;
 
         let map = new Map({
